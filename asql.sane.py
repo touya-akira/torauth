@@ -1,10 +1,8 @@
 #!/usr/bin/python
 """
 AdvancedTorSQL
-v2.0 by maddux
+v2.1 by maddux
 """
-
-#import sqlalchemy as sql
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -15,7 +13,7 @@ OKAY = "\002\00303TOR AUTH MESSAGE\003: \002"
 WARN = "\002\00308TOR AUTH WARNING\003: \002"
 CRIT = "\002\00304TOR AUTH CRITICAL\003: \002"
 COMMANDCHAN = "#command"
-db = create_engine('mysql://user:password@host:port/db_name')
+db = create_engine('mysql://user:pass@host:port/db')
 Base = declarative_base()
 Session = sessionmaker(bind=db)
 
@@ -33,6 +31,17 @@ class User(Base):
 
 	def __repr__(self):
 		return "<User('%r',%r',%r')>" % (self.ident, self.hash, self.comment)
+
+def ahelp(phenny, input):
+	phenny.say("Usage:")
+	phenny.say(".afind <ident|hash|comment> - searches the database for an entry")
+	phenny.say(".alist [id] - Shows all entries (\002Caution: Flooding!\002). If id keyword is given, entries will be sorted by id, not ident.")
+	phenny.say(".aadd <ident> <hash> [comment] - Adds a new user. Comment is optional.")
+	phenny.say(".adel <id> - delete an entry.")
+	phenny.say(".achghash <id> <newhash> - Change hash of a user.")
+	phenny.say(".achgident <id> <newident> - Change ident of a user.")
+	phenny.say(".achgcomment <id> <newcomment> - Change/add commentof a user")
+ahelp.commands = ['ahelp']
 
 def afind(phenny, input):
 	if input.sender != COMMANDCHAN: return
@@ -59,6 +68,23 @@ def afind(phenny, input):
 	else:
 		phenny.say('No arguments given.')
 afind.commands = ['afind']
+
+def alist(phenny, input):
+	if input.sender != COMMANDCHAN: return
+	session = Session()
+	count = 1
+	if str(input.group(2)) == "id":
+		for instance in session.query(User).order_by(User.id):
+			msg = str(instance.id)+', '+str(instance.ident)+', '+str(instance.hash)+', '+str(instance.comment)
+			phenny.say(OKAY+msg)
+			count += 1
+	else:
+		for instance in session.query(User).order_by(User.ident):
+			msg = str(instance.id)+', '+str(instance.ident)+', '+str(instance.hash)+', '+str(instance.comment)
+			phenny.say(OKAY+msg)
+			count += 1
+	phenny.say(OKAY+"\002"+str(count)+' records found\002')
+alist.commands = ['alist']
 
 def aadd(phenny, input):
 	if input.sender != COMMANDCHAN: return
@@ -95,7 +121,8 @@ def aadd(phenny, input):
 	session.add(add_user)
 	session.commit()
 	phenny.say(OKAY+"User added:")
-	phenny.say(OKAY+aident+", "+ahash+", "+acomment)
+	aid = str(add_user.id)
+	phenny.say(OKAY+aid+", "+aident+", "+ahash+", "+acomment)
 aadd.commands = ['aadd']
 
 def adel(phenny, input):
@@ -134,7 +161,10 @@ def achgident(phenny, input):
 	except ValueError:
 		phenny.say(CRIT+'ID must be an Integer. Usage: .achgident <id> <newident>')
 		return
-	aident = qry[1]
+	aident = (qry[1][:10]) if len(qry[1]) > 10 else qry[1]
+	if len(qry[1]) > 10:
+		msg = "Ident more than 10 characters. Truncating to "+aident+"."
+		phenny.say(WARN+msg)
 	if aid < 1:
 		phenny.say(CRIT+'Index Error.')
 		return
@@ -165,6 +195,9 @@ def achghash(phenny, input):
 		phenny.say(CRIT+'ID must be an Integer. Usage: .achghash <id> <newhash>')
 		return
 	ahash = qry[1]
+	if len(ahash) != 64:
+		phenny.say(CRIT+'Invalid hash length. Aborting.')
+		return
 	if aid < 1:
 		phenny.say(CRIT+'Index Error.')
 		return
