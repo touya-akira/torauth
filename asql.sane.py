@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """
 AdvancedTorSQL
-v2.1 by maddux
+v2.2 by maddux
 """
 
 from sqlalchemy import create_engine
@@ -13,7 +13,7 @@ OKAY = "\002\00303TOR AUTH MESSAGE\003: \002"
 WARN = "\002\00308TOR AUTH WARNING\003: \002"
 CRIT = "\002\00304TOR AUTH CRITICAL\003: \002"
 COMMANDCHAN = "#command"
-db = create_engine('mysql://user:pass@host:port/db')
+db = create_engine('mysql://user:password@host:port/database')
 Base = declarative_base()
 Session = sessionmaker(bind=db)
 
@@ -34,14 +34,14 @@ class User(Base):
 
 def ahelp(phenny, input):
 	phenny.say("Usage:")
-	phenny.say(".afind <ident|hash|comment> - searches the database for an entry")
-	phenny.say(".alist [id] - Shows all entries (\002Caution: Flooding!\002). If id keyword is given, entries will be sorted by id, not ident.")
-	phenny.say(".aadd <ident> <hash> [comment] - Adds a new user. Comment is optional.")
-	phenny.say(".adel <id> - delete an entry.")
-	phenny.say(".achghash <id> <newhash> - Change hash of a user.")
-	phenny.say(".achgident <id> <newident> - Change ident of a user.")
-	phenny.say(".achgcomment <id> <newcomment> - Change/add commentof a user")
-ahelp.commands = ['ahelp']
+	phenny.say(".find <ident|hash|comment> - searches the database for an entry")
+	phenny.say(".list [id] - Shows all entries (\002Caution: Flooding!\002). If id keyword is given, entries will be sorted by id, not ident.")
+	phenny.say(".add <ident> <hash> [comment] - Adds a new user. Comment is optional.")
+	phenny.say(".del <id> - delete an entry.")
+	phenny.say(".chghash <id> <newhash> - Change hash of a user.")
+	phenny.say(".chgident <id> <newident> - Change ident of a user.")
+	phenny.say(".chgcomment <id> <newcomment> - Change/add commentof a user")
+ahelp.commands = ['help']
 
 def afind(phenny, input):
 	if input.sender != COMMANDCHAN: return
@@ -66,8 +66,8 @@ def afind(phenny, input):
 		else:
 			phenny.say(str(count)+' matches found.')
 	else:
-		phenny.say('No arguments given.')
-afind.commands = ['afind']
+		phenny.say('No arguments given. Syntax: .find <ident|hash|comment>')
+afind.commands = ['find']
 
 def alist(phenny, input):
 	if input.sender != COMMANDCHAN: return
@@ -84,15 +84,15 @@ def alist(phenny, input):
 			phenny.say(OKAY+msg)
 			count += 1
 	phenny.say(OKAY+"\002"+str(count)+' records found\002')
-alist.commands = ['alist']
+alist.commands = ['list']
 
 def aadd(phenny, input):
 	if input.sender != COMMANDCHAN: return
 	if not input.group(2):
-		phenny.say('No arguments given. Usage: .aadd <ident> <hash> [comment]')
+		phenny.say('No arguments given. Usage: .add <ident> <hash> [comment]')
 		return
 	if not " " in input.group(2):
-		phenny.say('Need more than one argument. Usage: .aadd <ident> <hash> [comment]')
+		phenny.say('Need more than one argument. Usage: .add <ident> <hash> [comment]')
 		return
 	qry = input.group(2).split()
 	if len(qry[1]) != 64:
@@ -123,17 +123,17 @@ def aadd(phenny, input):
 	phenny.say(OKAY+"User added:")
 	aid = str(add_user.id)
 	phenny.say(OKAY+aid+", "+aident+", "+ahash+", "+acomment)
-aadd.commands = ['aadd']
+aadd.commands = ['add']
 
 def adel(phenny, input):
 	if input.sender != COMMANDCHAN: return
 	if not input.group(2):
-		phenny.say('No argument given. Usage: .adel <ID>')
+		phenny.say('No argument given. Usage: .del <id>')
 		return
 	try:
 		aid = int(input.group(2))
 	except ValueError:
-		phenny.say(CRIT+'ID must be an Integer. Usage: .adel <id>')
+		phenny.say(CRIT+'ID must be an Integer. Usage: .del <id>')
 		return
 	if aid < 1:
 		phenny.say(CRIT+'Index Error.')
@@ -148,18 +148,18 @@ def adel(phenny, input):
 		phenny.say(OKAY+'User deleted.')
 		return
 	phenny.say(CRIT+'ID not found.')
-adel.commands = ['adel']
+adel.commands = ['del']
 
 def achgident(phenny, input):
 	if input.sender != COMMANDCHAN: return
 	if not input.group(2):
-		phenny.say('No argument given. Usage: .adel <ID>')
+		phenny.say('No argument given. Usage: .chgident <id> <newident>')
 		return
 	qry = input.group(2).split()
 	try:
 		aid = int(qry[0])
 	except ValueError:
-		phenny.say(CRIT+'ID must be an Integer. Usage: .achgident <id> <newident>')
+		phenny.say(CRIT+'ID must be an Integer. Usage: .chgident <id> <newident>')
 		return
 	aident = (qry[1][:10]) if len(qry[1]) > 10 else qry[1]
 	if len(qry[1]) > 10:
@@ -181,18 +181,18 @@ def achgident(phenny, input):
 		phenny.say(OKAY+'User updated.')
 		return
 	phenny.say(CRIT+'ID not found')
-achgident.commands = ['achgident']
+achgident.commands = ['chgident']
 
 def achghash(phenny, input):
 	if input.sender != COMMANDCHAN: return
 	if not input.group(2):
-		phenny.say('No argument given. Usage: .adel <ID>')
+		phenny.say('No argument given. Usage: .chghash <id> <newhash>')
 		return
 	qry = input.group(2).split()
 	try:
 		aid = int(qry[0])
 	except ValueError:
-		phenny.say(CRIT+'ID must be an Integer. Usage: .achghash <id> <newhash>')
+		phenny.say(CRIT+'ID must be an Integer. Usage: .chghash <id> <newhash>')
 		return
 	ahash = qry[1]
 	if len(ahash) != 64:
@@ -214,12 +214,12 @@ def achghash(phenny, input):
 		phenny.say(OKAY+'User updated.')
 		return
 	phenny.say(CRIT+'ID not found')
-achghash.commands = ['achghash']
+achghash.commands = ['chghash']
 
 def achgcomment(phenny, input):
 	if input.sender != COMMANDCHAN: return
 	if not input.group(2):
-		phenny.say('No argument given. Usage: .adel <ID>')
+		phenny.say('No argument given. Usage: .chgcomment <id> <newcomment>')
 		return
 	qry = input.group(2).split()
 	if len(qry) > 2:
@@ -229,7 +229,7 @@ def achgcomment(phenny, input):
 	try:
 		aid = int(qry[0])
 	except ValueError:
-		phenny.say(CRIT+'ID must be an Integer. Usage: .achgcomment <id> <newcomment>')
+		phenny.say(CRIT+'ID must be an Integer. Usage: .chgcomment <id> <newcomment>')
 		return
 	if aid < 1:
 		phenny.say(CRIT+'Index Error.')
@@ -247,6 +247,6 @@ def achgcomment(phenny, input):
 		phenny.say(OKAY+'User updated.')
 		return
 	phenny.say(CRIT+'ID not found')
-achgcomment.commands = ['achgcomment']
+achgcomment.commands = ['chgcomment']
 
 
